@@ -1,0 +1,29 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2 }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2 }} >> ~/.ssh/known_hosts
+
+      - name: Copy files to EC2
+        run: |
+          scp -r -o StrictHostKeyChecking=no ./path/to/your/app/* ubuntu@${{ secrets.EC2_HOST }}:/var/www/html/praticaDeHoje/
+
+      - name: Restart Apache
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2 }} "sudo systemctl restart apache2"

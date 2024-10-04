@@ -18,12 +18,23 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.EC2 }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.EC2 }} >> ~/.ssh/known_hosts
+          if [ ! -f ~/.ssh/known_hosts ]; then
+              touch ~/.ssh/known_hosts
+          fi
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
       - name: Copy files to EC2
         run: |
-          scp -r -o StrictHostKeyChecking=no ./path/to/your/app/* ubuntu@${{ secrets.EC2_HOST }}:/var/www/html/praticaDeHoje/
+          scp -r -o StrictHostKeyChecking=no ./* ubuntu@${{ secrets.EC2_HOST }}:/var/www/html/praticaDeHoje/
+
+      - name: Set permissions
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "sudo chown -R www-data:www-data /var/www/html/praticaDeHoje && sudo chmod -R 755 /var/www/html/praticaDeHoje"
 
       - name: Restart Apache
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2 }} "sudo systemctl restart apache2"
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "sudo systemctl restart apache2"
+
+      - name: Verify connection to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "echo 'Connected successfully!'"

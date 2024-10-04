@@ -1,0 +1,40 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2 }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          if [ ! -f ~/.ssh/known_hosts ]; then
+              touch ~/.ssh/known_hosts
+          fi
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Copy files to EC2
+        run: |
+          scp -r -o StrictHostKeyChecking=no ./* ubuntu@${{ secrets.EC2_HOST }}:/var/www/html/praticaDeHoje/
+
+      - name: Set permissions
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "sudo chown -R www-data:www-data /var/www/html/praticaDeHoje && sudo chmod -R 755 /var/www/html/praticaDeHoje"
+
+      - name: Restart Apache
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "sudo systemctl restart apache2"
+
+      - name: Verify connection to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "echo 'Connected successfully!'"
